@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Chat</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Menu to ask for username -->
+    <div id="usernameMenu" class="menu">
+        <h2>Enter Your Username</h2>
+        <input type="text" id="usernameInput" placeholder="Enter username" />
+        <button id="setUsernameBtn">Join Chat</button>
+    </div>
+
+    <!-- Chat interface -->
+    <div id="chatInterface" class="hidden">
+        <div id="messagesContainer"></div>
+        <input type="text" id="messageInput" placeholder="Type a message..." />
+        <button id="sendMessageBtn">Send</button>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module" src="app.js"></script>
+</body>
+</html>
