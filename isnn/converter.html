@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DOCX → HTML Converter</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f0f0f;
+      --surface: #181818;
+      --surface2: #222;
+      --border: #2e2e2e;
+      --accent: #e8c97e;
+      --accent2: #a3c4f3;
+      --text: #e8e6e0;
+      --muted: #888;
+      --green: #6fcf97;
+      --red: #eb5757;
+      --font-mono: 'Courier New', Courier, monospace;
+      --font-ui: Georgia, 'Times New Roman', serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-ui);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ---- HEADER ---- */
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 20px 32px;
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+    }
+
+    header h1 {
+      font-size: 1.4rem;
+      font-weight: normal;
+      letter-spacing: 0.04em;
+      color: var(--accent);
+    }
+
+    header span {
+      font-size: 0.8rem;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    /* ---- MAIN LAYOUT ---- */
+    .workspace {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ---- LEFT PANEL ---- */
+    .left-panel {
+      border-right: 1px solid var(--border);
+      padding: 28px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      background: var(--surface);
+    }
+
+    .section-label {
+      font-size: 0.68rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    /* Drop zone */
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: 6px;
+      padding: 36px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      position: relative;
+    }
+
+    .drop-zone:hover,
+    .drop-zone.dragging {
+      border-color: var(--accent);
+      background: rgba(232, 201, 126, 0.04);
+    }
+
+    .drop-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .drop-icon {
+      font-size: 2.4rem;
+      margin-bottom: 12px;
+    }
+
+    .drop-zone p {
+      font-size: 0.9rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .drop-zone strong {
+      color: var(--accent);
+      font-weight: normal;
+    }
+
+    /* File info */
+    #file-info {
+      display: none;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px 16px;
+      font-size: 0.85rem;
+    }
+
+    #file-info .file-name {
+      color: var(--accent2);
+      word-break: break-all;
+      margin-bottom: 4px;
+    }
+
+    #file-info .file-size {
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+
+    /* Convert button */
+    #convert-btn {
+      background: var(--accent);
+      color: #111;
+      border: none;
+      border-radius: 4px;
+      padding: 13px 20px;
+      font-family: var(--font-ui);
+      font-size: 0.95rem;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      display: none;
+    }
+
+    #convert-btn:hover { opacity: 0.88; }
+    #convert-btn:active { transform: scale(0.98); }
+
+    /* Options */
+    .options-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .option-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.85rem;
+      color: var(--text);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .option-row input[type="checkbox"] {
+      accent-color: var(--accent);
+      width: 15px;
+      height: 15px;
+      cursor: pointer;
+    }
+
+    /* Status */
+    #status {
+      font-size: 0.82rem;
+      padding: 10px 14px;
+      border-radius: 4px;
+      display: none;
+    }
+
+    #status.success {
+      background: rgba(111, 207, 151, 0.1);
+      border: 1px solid rgba(111, 207, 151, 0.3);
+      color: var(--green);
+      display: block;
+    }
+
+    #status.error {
+      background: rgba(235, 87, 87, 0.1);
+      border: 1px solid rgba(235, 87, 87, 0.3);
+      color: var(--red);
+      display: block;
+    }
+
+    /* Action buttons */
+    .action-buttons {
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .action-buttons.visible { display: flex; }
+
+    .btn-secondary {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 4px;
+      padding: 10px 16px;
+      font-family: var(--font-ui);
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+      text-align: left;
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--accent2);
+      color: var(--accent2);
+    }
+
+    /* ---- RIGHT PANEL ---- */
+    .right-panel {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      padding: 14px 24px;
+      font-family: var(--font-ui);
+      font-size: 0.85rem;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .tab-panel {
+      display: none;
+      flex: 1;
+      overflow: auto;
+    }
+
+    .tab-panel.active { display: flex; flex-direction: column; }
+
+    /* Preview */
+    #preview-frame-wrap {
+      flex: 1;
+      overflow: auto;
+      padding: 32px 40px;
+      background: #fff;
+    }
+
+    #preview-content {
+      max-width: 780px;
+      margin: 0 auto;
+      font-family: Georgia, serif;
+      font-size: 15px;
+      line-height: 1.7;
+      color: #111;
+    }
+
+    #preview-content h1 { font-size: 2em; margin: 0.8em 0 0.4em; }
+    #preview-content h2 { font-size: 1.5em; margin: 0.8em 0 0.3em; }
+    #preview-content h3 { font-size: 1.2em; margin: 0.7em 0 0.3em; }
+    #preview-content p  { margin-bottom: 0.9em; }
+    #preview-content ul, #preview-content ol { margin: 0.5em 0 0.9em 1.6em; }
+    #preview-content li { margin-bottom: 0.3em; }
+    #preview-content table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+    #preview-content th, #preview-content td { border: 1px solid #ccc; padding: 8px 12px; text-align: left; }
+    #preview-content th { background: #f4f4f4; font-weight: bold; }
+    #preview-content strong { font-weight: bold; }
+    #preview-content em { font-style: italic; }
+    #preview-content u  { text-decoration: underline; }
+    #preview-content blockquote { border-left: 3px solid #aaa; margin: 1em 0; padding-left: 16px; color: #555; }
+    #preview-content a  { color: #1a0dab; }
+    #preview-content img { max-width: 100%; }
+
+    /* Empty state */
+    .empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      gap: 12px;
+      background: #fff;
+    }
+
+    .empty-state .empty-icon { font-size: 3rem; opacity: 0.3; }
+    .empty-state p { font-size: 0.9rem; opacity: 0.6; }
+
+    /* Code view */
+    #code-panel {
+      flex: 1;
+      overflow: auto;
+      position: relative;
+    }
+
+    #html-output {
+      width: 100%;
+      height: 100%;
+      min-height: 400px;
+      background: var(--bg);
+      color: #a8d0a8;
+      border: none;
+      outline: none;
+      padding: 28px 32px;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      line-height: 1.65;
+      resize: none;
+      tab-size: 2;
+    }
+
+    #char-count {
+      position: absolute;
+      bottom: 12px;
+      right: 16px;
+      font-size: 0.72rem;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      pointer-events: none;
+    }
+
+    /* Warnings panel */
+    #warnings-panel {
+      background: var(--surface2);
+      border-top: 1px solid var(--border);
+      max-height: 160px;
+      overflow-y: auto;
+      display: none;
+    }
+
+    #warnings-panel.visible { display: block; }
+
+    #warnings-panel .warn-header {
+      padding: 8px 20px;
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #f2994a;
+      border-bottom: 1px solid var(--border);
+    }
+
+    #warnings-list {
+      padding: 10px 20px;
+      font-size: 0.78rem;
+      color: #f2994a;
+      font-family: var(--font-mono);
+      line-height: 1.7;
+    }
+
+    /* Loading spinner */
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(0,0,0,0.3);
+      border-top-color: #111;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Responsive */
+    @media (max-width: 800px) {
+      .workspace { grid-template-columns: 1fr; }
+      .left-panel { border-right: none; border-bottom: 1px solid var(--border); }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>DOCX → HTML</h1>
+    <span>Document Converter</span>
+  </header>
+
+  <div class="workspace">
+
+    <!-- LEFT: Controls -->
+    <aside class="left-panel">
+
+      <div>
+        <div class="section-label">1. Upload File</div>
+        <div class="drop-zone" id="drop-zone">
+          <input type="file" id="file-input" accept=".docx" />
+          <div class="drop-icon">📄</div>
+          <p>Drop your <strong>.docx</strong> file here<br>or click to browse</p>
+        </div>
+      </div>
+
+      <div id="file-info">
+        <div class="file-name" id="file-name-display"></div>
+        <div class="file-size" id="file-size-display"></div>
+      </div>
+
+      <div>
+        <div class="section-label">2. Options</div>
+        <div class="options-group">
+          <label class="option-row">
+            <input type="checkbox" id="opt-styles" checked />
+            Preserve inline styles (bold, italic, color)
+          </label>
+          <label class="option-row">
+            <input type="checkbox" id="opt-tables" checked />
+            Convert tables
+          </label>
+          <label class="option-row">
+            <input type="checkbox" id="opt-images" />
+            Embed images as base64
+          </label>
+          <label class="option-row">
+            <input type="checkbox" id="opt-wrap" checked />
+            Wrap in full HTML document
+          </label>
+        </div>
+      </div>
+
+      <button id="convert-btn">Convert →</button>
+
+      <div id="status"></div>
+
+      <div class="action-buttons" id="action-buttons">
+        <div class="section-label">3. Export</div>
+        <button class="btn-secondary" id="copy-btn">⎘ Copy HTML to Clipboard</button>
+        <button class="btn-secondary" id="download-btn">↓ Download as .html</button>
+        <button class="btn-secondary" id="reset-btn">↺ Convert Another File</button>
+      </div>
+
+    </aside>
+
+    <!-- RIGHT: Output -->
+    <section class="right-panel">
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="preview">Preview</button>
+        <button class="tab-btn" data-tab="code">HTML Source</button>
+      </div>
+
+      <!-- Preview tab -->
+      <div class="tab-panel active" id="tab-preview">
+        <div id="preview-frame-wrap">
+          <div id="preview-content">
+            <div class="empty-state">
+              <div class="empty-icon">🗒️</div>
+              <p>Upload a .docx file to see the preview here</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Code tab -->
+      <div class="tab-panel" id="tab-code">
+        <div id="code-panel">
+          <textarea id="html-output" spellcheck="false" placeholder="<!-- Converted HTML will appear here -->"></textarea>
+          <div id="char-count"></div>
+        </div>
+        <div id="warnings-panel">
+          <div class="warn-header">⚠ Conversion Warnings</div>
+          <div id="warnings-list"></div>
+        </div>
+      </div>
+
+    </section>
+  </div>
+
+  <script>
+    const fileInput   = document.getElementById('file-input');
+    const dropZone    = document.getElementById('drop-zone');
+    const fileInfo    = document.getElementById('file-info');
+    const fileNameEl  = document.getElementById('file-name-display');
+    const fileSizeEl  = document.getElementById('file-size-display');
+    const convertBtn  = document.getElementById('convert-btn');
+    const statusEl    = document.getElementById('status');
+    const actionBtns  = document.getElementById('action-buttons');
+    const htmlOutput  = document.getElementById('html-output');
+    const previewEl   = document.getElementById('preview-content');
+    const charCount   = document.getElementById('char-count');
+    const warningsPanel = document.getElementById('warnings-panel');
+    const warningsList  = document.getElementById('warnings-list');
+    const copyBtn     = document.getElementById('copy-btn');
+    const downloadBtn = document.getElementById('download-btn');
+    const resetBtn    = document.getElementById('reset-btn');
+
+    let selectedFile = null;
+    let convertedFileName = 'document';
+
+    // ---- File selection ----
+    function handleFile(file) {
+      if (!file || !file.name.endsWith('.docx')) {
+        showStatus('Please select a valid .docx file.', 'error');
+        return;
+      }
+      selectedFile = file;
+      convertedFileName = file.name.replace(/\.docx$/i, '');
+      fileNameEl.textContent = file.name;
+      fileSizeEl.textContent = formatSize(file.size);
+      fileInfo.style.display = 'block';
+      convertBtn.style.display = 'block';
+      statusEl.style.display = 'none';
+      actionBtns.classList.remove('visible');
+      htmlOutput.value = '';
+      charCount.textContent = '';
+      warningsPanel.classList.remove('visible');
+      previewEl.innerHTML = '<div class="empty-state"><div class="empty-icon">🗒️</div><p>Click Convert to see the preview</p></div>';
+    }
+
+    fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
+
+    // Drag & drop
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragging'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragging'));
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragging');
+      handleFile(e.dataTransfer.files[0]);
+    });
+
+    // ---- Convert ----
+    convertBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+
+      convertBtn.innerHTML = '<span class="spinner"></span>Converting…';
+      convertBtn.disabled = true;
+      statusEl.style.display = 'none';
+
+      try {
+        const arrayBuffer = await selectedFile.arrayBuffer();
+        const wrapFull = document.getElementById('opt-wrap').checked;
+        const embedImages = document.getElementById('opt-images').checked;
+
+        // Build mammoth options
+        const options = {};
+
+        if (!embedImages) {
+          options.convertImage = mammoth.images.imgElement(() => ({ src: '' }));
+        }
+
+        const result = await mammoth.convertToHtml({ arrayBuffer }, options);
+        let html = result.value;
+
+        // Strip inline styles if unchecked (remove style="" attributes added by mammoth)
+        if (!document.getElementById('opt-styles').checked) {
+          html = html.replace(/\s*style="[^"]*"/g, '');
+        }
+
+        // Strip tables if unchecked
+        if (!document.getElementById('opt-tables').checked) {
+          html = html.replace(/<table[\s\S]*?<\/table>/gi, '<!-- [table removed] -->');
+        }
+
+        // Pretty-print the HTML
+        html = prettyPrint(html);
+
+        // Wrap in full document if checked
+        let finalHtml;
+        if (wrapFull) {
+          finalHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${escapeHtml(convertedFileName)}</title>
+  <style>
+    body {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 15px;
+      line-height: 1.7;
+      color: #111;
+      max-width: 780px;
+      margin: 40px auto;
+      padding: 0 24px;
+    }
+    h1, h2, h3, h4, h5, h6 { font-weight: bold; margin: 1em 0 0.4em; }
+    h1 { font-size: 2em; }
+    h2 { font-size: 1.5em; }
+    h3 { font-size: 1.2em; }
+    p  { margin-bottom: 0.9em; }
+    ul, ol { margin: 0.5em 0 0.9em 1.6em; }
+    li { margin-bottom: 0.3em; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+    th, td { border: 1px solid #ccc; padding: 8px 12px; text-align: left; }
+    th { background: #f4f4f4; }
+    blockquote { border-left: 3px solid #aaa; margin: 1em 0; padding-left: 16px; color: #555; }
+    a { color: #1a0dab; }
+    img { max-width: 100%; }
+  </style>
+</head>
+<body>
+${indentBlock(html, 2)}
+</body>
+</html>`;
+        } else {
+          finalHtml = html;
+        }
+
+        // Display
+        htmlOutput.value = finalHtml;
+        charCount.textContent = formatSize(finalHtml.length) + ' · ' + finalHtml.split('\n').length + ' lines';
+
+        // Preview (always use the body fragment)
+        previewEl.innerHTML = html || '<p style="color:#aaa;">No content found in document.</p>';
+
+        // Warnings
+        if (result.messages && result.messages.length > 0) {
+          warningsList.innerHTML = result.messages.map(m => `<div>• ${escapeHtml(m.message)}</div>`).join('');
+          warningsPanel.classList.add('visible');
+        } else {
+          warningsPanel.classList.remove('visible');
+        }
+
+        showStatus(`✓ Converted successfully — ${formatSize(finalHtml.length)} of HTML generated`, 'success');
+        actionBtns.classList.add('visible');
+
+      } catch (err) {
+        showStatus('Conversion failed: ' + err.message, 'error');
+      }
+
+      convertBtn.innerHTML = 'Convert →';
+      convertBtn.disabled = false;
+    });
+
+    // ---- Tabs ----
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+      });
+    });
+
+    // ---- Copy ----
+    copyBtn.addEventListener('click', async () => {
+      if (!htmlOutput.value) return;
+      try {
+        await navigator.clipboard.writeText(htmlOutput.value);
+        copyBtn.textContent = '✓ Copied!';
+        setTimeout(() => copyBtn.textContent = '⎘ Copy HTML to Clipboard', 2000);
+      } catch {
+        htmlOutput.select();
+        document.execCommand('copy');
+        copyBtn.textContent = '✓ Copied!';
+        setTimeout(() => copyBtn.textContent = '⎘ Copy HTML to Clipboard', 2000);
+      }
+    });
+
+    // ---- Download ----
+    downloadBtn.addEventListener('click', () => {
+      if (!htmlOutput.value) return;
+      const blob = new Blob([htmlOutput.value], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = convertedFileName + '.html';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // ---- Reset ----
+    resetBtn.addEventListener('click', () => {
+      selectedFile = null;
+      fileInput.value = '';
+      fileInfo.style.display = 'none';
+      convertBtn.style.display = 'none';
+      statusEl.style.display = 'none';
+      actionBtns.classList.remove('visible');
+      htmlOutput.value = '';
+      charCount.textContent = '';
+      warningsPanel.classList.remove('visible');
+      previewEl.innerHTML = '<div class="empty-state"><div class="empty-icon">🗒️</div><p>Upload a .docx file to see the preview here</p></div>';
+    });
+
+    // ---- Helpers ----
+    function showStatus(msg, type) {
+      statusEl.textContent = msg;
+      statusEl.className = type;
+    }
+
+    function formatSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function indentBlock(html, spaces) {
+      const pad = ' '.repeat(spaces);
+      return html.split('\n').map(l => pad + l).join('\n');
+    }
+
+    // Basic pretty-printer: adds newlines around block-level tags
+    function prettyPrint(html) {
+      const blocks = ['p','div','h1','h2','h3','h4','h5','h6','ul','ol','li','table','thead','tbody','tr','th','td','blockquote','pre','br','hr'];
+      let out = html;
+      blocks.forEach(tag => {
+        out = out.replace(new RegExp(`<(${tag})(\\s[^>]*)?>`, 'gi'), '\n<$1$2>');
+        out = out.replace(new RegExp(`</(${tag})>`, 'gi'), '</$1>\n');
+      });
+      // Clean up multiple blank lines
+      out = out.replace(/\n{3,}/g, '\n\n').trim();
+      return out;
+    }
+  </script>
+</body>
+</html>
