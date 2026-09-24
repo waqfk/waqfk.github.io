@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - What are you doing here?</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /* Animated rainbow gradient */
+            background: linear-gradient(124deg, #ff2400, #e81d1d, #e8b71d, #e3e81d, #1de840, #1ddde8, #2b1de8, #dd00f3, #dd00f3);
+            background-size: 1800% 1800%;
+            animation: rainbowBg 8s ease infinite;
+            font-family: Tahoma, Verdana, Arial, sans-serif;
+            color: #d0d0d0;
+        }
+
+        @keyframes rainbowBg { 
+            0% { background-position: 0% 82%; }
+            50% { background-position: 100% 19%; }
+            100% { background-position: 0% 82%; }
+        }
+
+        #wrapper {
+            width: 800px;
+            max-width: 90%;
+            background-color: #121212;
+            /* Classic 3D outset border effect */
+            border-top: 3px solid #666;
+            border-left: 3px solid #666;
+            border-right: 3px solid #000;
+            border-bottom: 3px solid #000;
+            /* Heavy drop shadow */
+            box-shadow: 10px 10px 30px rgba(0,0,0,0.8); 
+            text-align: center;
+            /* Subtle scanline background pattern */
+            background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFElEQVQIW2NkYGD4z8DAwMgAI0AMDA4wBBo5tF8AAAAASUVORK5CYII=');
+            background-repeat: repeat;
+        }
+
+        .marquee-container {
+            background: #000;
+            border-bottom: 2px solid #333;
+            padding: 4px;
+        }
+
+        marquee {
+            color: #ffcc00;
+            font-size: 14px;
+            font-family: "Courier New", Courier, monospace;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .main-content {
+            padding: 40px 20px;
+        }
+
+        .cool-text-404 {
+            font-family: "Impact", sans-serif;
+            font-size: 100px;
+            color: #ff2222;
+            margin: 0;
+            line-height: 1;
+            /* Classic 2000s harsh drop shadow effect */
+            text-shadow: 4px 4px 0px #000, 7px 7px 0px #444;
+            letter-spacing: 2px;
+        }
+
+        .cool-text-what {
+            font-family: "Impact", sans-serif;
+            font-size: 48px;
+            color: #ffffff;
+            text-transform: uppercase;
+            margin-top: 10px;
+            margin-bottom: 30px;
+            text-shadow: 3px 3px 0px #000, 5px 5px 0px #444;
+            letter-spacing: 1px;
+        }
+
+        .content-box {
+            background-color: #1a1a1a;
+            /* Inset border for inner box */
+            border-top: 2px solid #000;
+            border-left: 2px solid #000;
+            border-right: 2px solid #444;
+            border-bottom: 2px solid #444;
+            padding: 20px;
+            margin: 0 auto;
+            width: 70%;
+        }
+
+        .content-box p {
+            font-size: 16px;
+            line-height: 1.6;
+            margin: 0;
+            color: #ff9900;
+            font-family: "Courier New", Courier, monospace;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="wrapper">
+        <div class="marquee-container">
+            <marquee scrollamount="8">SYSTEM ALERT: ERROR 404 - FILE NOT FOUND. THE TARGET DESTINATION DOES NOT EXIST. PLEASE CHECK YOUR COORDINATES.</marquee>
+        </div>
+
+        <div class="main-content">
+            <h1 class="cool-text-404">404</h1>
+            <h2 class="cool-text-what">WHAT ARE YOU DOING HERE?</h2>
+            
+            <div class="content-box">
+                <p id="random-message">Loading diagnostic message...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Array of 20+ random messages
+        const messages = [
+            "You wandered too far from home.",
+            "You've reached the end of the internet.",
+            "Turn back now, traveler.",
+            "Nothing to see here, move along.",
+            "You must be completely lost.",
+            "This sector is totally empty.",
+            "Did you type that URL with your elbows?",
+            "Error 404: The requested reality is currently offline.",
+            "You took a wrong turn at the last hyperlink.",
+            "The digital void stares back at you.",
+            "Map boundaries exceeded. Return to the play area.",
+            "There are no easter eggs up here. Go away.",
+            "We're sorry, but the princess is in another castle.",
+            "Are you sure you know where you're going?",
+            "You've fallen through the geometry of the web.",
+            "This page has been abducted by aliens.",
+            "A black hole consumed the content you requested.",
+            "It's dangerous to go alone! But there's nothing here anyway.",
+            "The page you are looking for is hiding from you.",
+            "You navigated into a restricted dark zone.",
+            "Congratulations, you found the absolute middle of nowhere.",
+            "You stepped out of bounds. The sysadmin has been logged."
+        ];
+
+        // Function to select and display a random message on load
+        window.onload = function() {
+            const messageElement = document.getElementById('random-message');
+            const randomIndex = Math.floor(Math.random() * messages.length);
+            messageElement.innerText = "> " + messages[randomIndex] + " <";
+        };
+    </script>
+</body>
+</html>
